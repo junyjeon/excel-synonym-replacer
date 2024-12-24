@@ -1,0 +1,1 @@
+# excel-synonym-replacer
