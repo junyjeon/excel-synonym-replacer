@@ -15,7 +15,7 @@ from dataframe_model import DataFrameModel  # 별도 .py로 분리(아래 예시
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("유의어 치환기 (B~F → M열부터 다중 버전)")
+        self.setWindowTitle("엑셀 유의어 치환기")
 
         # --- 멤버 ---
         self._df = pd.DataFrame()
@@ -143,6 +143,10 @@ class MainWindow(QMainWindow):
             col_selection.append("색상")
         if self.chk_material.isChecked():  # 소재 체크
             col_selection.append("소재")
+        if self.chk_pattern.isChecked():  # 패턴 체크
+            col_selection.append("패턴")
+        if self.chk_category.isChecked():  # 카테고리 체크
+            col_selection.append("카테고리")
 
         version_count = self.spin_version.value()  # 2개로 설정됨
         new_df = self._df.copy()

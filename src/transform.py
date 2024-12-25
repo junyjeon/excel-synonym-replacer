@@ -1,5 +1,6 @@
 import pandas as pd
 import re
+from itertools import product
 
 # transform.py
 def replace_with_synonyms_in_row(row, col_selection, synonym_dict):
@@ -61,55 +62,63 @@ def clean_text(text: str) -> str:
 
 def replace_with_synonyms_in_row_v(row, col_selection, synonym_dict, version_idx):
     """
-    row: 한 행
-    col_selection: 체크된 항목
-    synonym_dict: {원본단어: [유의어1,...]}
-    version_idx: 0,1,2,... => 유의어 인덱스
+    주어진 행의 선택된 열들에 대해 가능한 모든 유의어 조합을 생성
+    
+    Args:
+        row: 처리할 데이터 행 (pandas.Series)
+        col_selection: 유의어 치환을 수행할 열 목록 ["색상", "패턴" 등]
+        synonym_dict: 각 열별 유의어 사전 {"색상": {"블랙": ["검정", "진검정"]} 등}
+        version_idx: 조합 버전 인덱스 (0부터 시작)
     """
     try:
-        # 입력 검증
-        if not isinstance(row, (pd.Series, dict)):
-            raise ValueError("Invalid row type")
-            
-        # 열 매핑 검증
+        # 1. 열 위치 매핑
         col_map = {
-            # "브랜드": 1,  # 브랜드 주석처리
             "색상": 2,
             "패턴": 3,
             "소재": 4,
             "카테고리": 5
         }
+            
+        # 2. 각 키별 유의어 리스트 수집
+        ordered_keys = ["색상", "패턴", "소재", "카테고리"]
+        synonym_lists = []
+        original_values = []
         
-        pieces = []
-        # for key in ["브랜드","색상","패턴","소재","카테고리"]:  # 브랜드 제외
-        for key in ["색상","패턴","소재","카테고리"]:
-            try:
-                # 값 가져오고 전처리
-                val = str(row.iloc[col_map[key]]).strip()
-                val = clean_text(val)
-                
-                if not val:  # 전처리 후 빈 문자열이면 스킵
-                    continue
-                    
-            except:
+        for key in ordered_keys:
+            if key not in col_selection:
                 continue
                 
-            if key in col_selection:  # 선택된 카테고리만 치환
-                if val in synonym_dict:
-                    syn_list = synonym_dict[val]
-                    if syn_list:
-                        idx = version_idx % len(syn_list)
-                        pick = syn_list[idx]
-                        pieces.append(pick)
-                        print(f"치환: {val} -> {pick} (버전 {version_idx})")  # 디버깅용
-                    else:
-                        pieces.append(val)
-                else:
-                    pieces.append(val)
-            else:
-                pieces.append(val)
+            val = str(row.iloc[col_map[key]]).strip()
+            val = clean_text(val)
+            
+            if not val:
+                continue
                 
-        return " ".join(filter(None, pieces))  # 빈 문자열 제거
+            original_values.append(val)
+            
+            if key in synonym_dict:
+                if val in synonym_dict[key]:
+                    synonyms = synonym_dict[key][val]
+                    if synonyms:
+                        synonym_lists.append(synonyms)
+                    else:
+                        synonym_lists.append([val])
+                else:
+                    synonym_lists.append([val])
+            else:
+                synonym_lists.append([val])
+
+        # 3. 모든 가능한 조합 생성
+        all_combinations = list(product(*synonym_lists))
+        total_combinations = len(all_combinations)
+        
+        # 4. 현재 version에 해당하는 조합 선택
+        if total_combinations > 0:
+            current_combination = all_combinations[version_idx % total_combinations]
+            print(f"조합 {version_idx % total_combinations + 1}/{total_combinations}: {' '.join(current_combination)}")
+            return " ".join(current_combination)
+        
+        return " ".join(original_values)
         
     except Exception as e:
         print(f"Error in replacement: {e}")

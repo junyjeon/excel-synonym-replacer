@@ -1,10 +1,11 @@
-#step1_synonym_extract.py
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import os
 from openai import OpenAI
 import pandas as pd
 from dotenv import load_dotenv
 from openpyxl import Workbook, load_workbook
-import re
 
 # .env 파일 불러오기
 load_dotenv()
@@ -22,92 +23,43 @@ def get_column_prompt(col_name: str, word: str) -> str:
     열 특성에 맞는 프롬프트 반환
     """
     prompts = {
-        "브랜드": f"""'{word}'의 한글-영문 표기를 콤마(,)로 구분해서 작성해주세요.
+        "브랜드": f"""'{word}'의 다른 표기법 3개를 알려주세요.
 규칙:
-1) 영문 브랜드명이면 한글 발음을, 한글 브랜드명이면 영문 표기를 작성
-2) 공식 표기만 사용
+1) 브랜드의 공식 표기만 사용
+2) 한글/영문/혼합 표기 모두 가능
 3) 대소문자 구분 필요
-4) 번호나 설명 없이 단어만 작성
+예시: ADIDAS → 아디다스, ADIDAS, 아디다스코리아""",
 
-입력 예시 1: ADIDAS
-출력 예시 1: 아디다스
-
-입력 예시 2: 아디다스
-출력 예시 2: ADIDAS""",
-
-        "색상": f"""'{word}' 색상의 유의어 3개만 콤마(,)로 구분해서 작성해주세요.
+        "색상": f"""'{word}' 색상의 다른 표현 3개를 알려주세요.
 규칙:
-1) 명도/채도가 다른 색상은 제외 (예: 블루≠스카이블루≠네이비)
-2) 정확히 동일한 색상명 우선
-3) 영문일 경우 대문자로 작성
-4) 되도록 한글 표기로 작성
-5) 번호나 설명 없이 단어만 작성
+1) 쇼핑몰에서 실제 사용되는 색상명
+2) 비슷한 색상 계열로 표현
+3) 한글/영문 혼용 가능
+예시: 검정 → 블랙, 진검정, 차콜블랙""",
 
-입력 예시: 검정
-출력 예시: 블랙, BLACK, 검정색""",
-
-        "패턴": f"""'{word}' 패턴의 정확한 동의어 3개만 콤마(,)로 구분해서 작성해주세요.
+        "패턴": f"""'{word}' 패턴의 다른 표현 3개를 알려주세요.
 규칙:
-1) 쇼핑몰에서 쓰이는 패턴 표현
-2) 정확히 같은 의미의 패턴 우선
-3) 다른 패턴은 제외 (예: 무지≠스트라이프)
-4) 번호나 설명 없이 단어만 작성
+1) 쇼핑몰에서 자주 쓰이는 패턴 표현
+2) 유사한 느낌의 패턴명
+3) 소비자가 이해하기 쉬운 표현
+예시: 체크 → 타탄체크, 깅엄체크, 플래드""",
 
-입력 예시: 체크
-출력 예시: 체크무늬, 체크패턴, 격자무늬""",
-
-        "소재": f"""'{word}' 소재의 유의어 3개만 콤마(,)로 구분해서 작성해주세요.
+        "소재": f"""'{word}' 소재의 다른 표현 3개를 알려주세요.
 규칙:
-1) 쇼핑몰에서 쓰이는 소재 표현
-2) 정확히 동일한 소재 우선
-3) 없다면 가장 유사한 소재 표현 사용
-4) 전혀 다른 소재는 제외
-5) 혼방/믹스 등은 별개 소재로 취급
-6) 번호나 설명 없이 단어만 작성
+1) 쇼핑몰에서 자주 쓰이는 소재 표현
+2) 동일 소재의 다른 표기
+3) 혼방 비율 표현 포함 가능
+예시: 면 → 코튼, 면100%, 순면""",
 
-입력 예시 1: 폴리에스터
-출력 예시 1: 폴리, 폴리에스테르
-
-입력 예시 2: 비스코스
-출력 예시 2: 레이온, 인견""",
-
-        "카테고리": f"""'{word}' 카테고리의 유의어 3개만 콤마(,)로 구분해서 작성해주세요.
+        "카테고리": f"""'{word}' 카테고리의 다른 표현 3개를 알려주세요.
 규칙:
-1) 정확히 같은 의류 품목 우선
-2) 없다면 가장 유사한 표현 사용
-3) 의미가 크게 다른 것은 제외
-4) 번호나 설명 없이 단어만 작성
-
-입력 예시 1: 맨투맨
-출력 예시 1: 스웨트셔츠, 맨투맨티셔츠, 맨투맨티
-
-입력 예시 2: 셔츠블라우스
-출력 예시 2: 블라우스셔츠, 셔츠형블라우스, 블라우스""",
+1) 쇼핑몰에서 자주 쓰이는 상품 분류명
+2) 동일 품목의 다른 표현
+3) 상품 특성이 반영된 표현
+예시: 맨투맨 → 스웨트셔츠, 기모맨투맨, 트레이닝"""
     }
     
     return prompts.get(col_name, "")
-
-def clean_gpt_response(response: str, original_word: str) -> list:
-    """
-    GPT 응답을 정제하여 유의어 리스트로 변환
-    """
-    # 번호 패턴 제거 (예: 1., 2), (1), 1))
-    response = re.sub(r'^\s*\d+[\.\)]\s*', '', response, flags=re.MULTILINE)
-    
-    # 설명 텍스트 제거 (예: "다음과 같습니다:", "→" 등)
-    response = re.sub(r'.*→\s*', '', response)
-    response = re.sub(r'다음과\s*같습니다.*:', '', response)
-    
-    # 괄호 안의 설명 제거 (예: (Olive), (Military Green))
-    response = re.sub(r'\s*\([^)]*\)', '', response)
-    
-    # 콤마로 분리하고 정제
-    words = [w.strip() for w in response.split(',') if w.strip()]
-    
-    # 원본단어와 같은 경우 제외
-    words = [w for w in words if w.lower() != original_word.lower()]
-    
-    return words
 
 def get_synonyms_from_gpt(original_word: str, col_name: str, num_synonyms=3) -> list:
     """
@@ -117,18 +69,16 @@ def get_synonyms_from_gpt(original_word: str, col_name: str, num_synonyms=3) -> 
 
     try:
         response = client.chat.completions.create(
-            model="gpt-4o-2024-11-20",
+            model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt_text}],
         )
         content = response.choices[0].message.content.strip()
+        synonyms = [s.strip() for s in content.split(",") if s.strip()]
         
-        # 원본단어를 파라미터로 전달하여 중복 체크
-        words = clean_gpt_response(content, original_word)
+        if len(synonyms) < num_synonyms:
+            synonyms += [""] * (num_synonyms - len(synonyms))
         
-        if len(words) < num_synonyms:
-            words += [""] * (num_synonyms - len(words))
-        
-        return words[:num_synonyms]
+        return synonyms[:num_synonyms]
 
     except Exception as e:
         print(f"[오류] GPT 호출 실패: {e}")
@@ -178,7 +128,7 @@ def main(skip_existing=True):
     }
 
     # 2) 추출 대상 열 목록
-    target_cols = ["색상","패턴","소재","카테고리"]
+    target_cols = ["브랜드","색상","패턴","소재","카테고리"]
 
     # 3) 기존 엑셀 파일 열기
     try:
@@ -191,16 +141,16 @@ def main(skip_existing=True):
         # 해당하는 열 번호로 데이터 추출
         column_data = df[col_mapping[col_name]]
         
-        # 2~6행 선택 (첫 행은 헤더이므로 제외)
-        first_five = (
-            column_data.iloc[1:10]
+        # 2~4행만 선택 (첫 행은 헤더이므로 제외)
+        first_three = (
+            column_data.iloc[1:4]  # 인덱스 1,2,3 (2,3,4행) 선택
             .dropna()
             .astype(str)
             .apply(clean_word)
         )
         
         # 중복 제거
-        unique_values = pd.unique(first_five).tolist()
+        unique_values = pd.unique(first_three).tolist()
 
         # 빈 문자열이나 의미 없는 값 제거
         unique_values = [v for v in unique_values if v and v not in ['없음', '-', 'none', 'None']]
@@ -211,54 +161,33 @@ def main(skip_existing=True):
         if col_name in wb.sheetnames:
             ws = wb[col_name]
             if skip_existing:
-                # 기존 데이터에서 원본단어와 유의어 조합 목록 추출
-                existing_data = {}
+                # 기존 데이터에서 원본단어 목록 추출
+                existing_words = set()
                 for row in range(2, ws.max_row + 1):  # 헤더 제외
-                    original = ws.cell(row=row, column=1).value
-                    if not original:  # 빈 셀이면 스킵
-                        continue
-                        
-                    original = str(original).strip()
-                    
-                    # 다른 시트는 유의어1,2,3 체크
-                    synonyms = []
-                    for col in range(2, 5):  # 2,3,4열 (유의어1,2,3)
-                        syn = ws.cell(row=row, column=col).value
-                        if syn:  # 빈 셀이 아닌 경우만 추가
-                            synonyms.append(str(syn).strip())
-                    if synonyms:  # 유의어가 하나라도 있는 경우만 저장
-                        existing_data[original] = synonyms
+                    # 원본단어와 유의어1,2,3 모두 체크
+                    for col in range(1, 5):  # A,B,C,D열
+                        value = ws.cell(row=row, column=col).value
+                        if value:
+                            existing_words.add(str(value).strip())
                 
                 # 기존에 없는 단어만 필터링
-                filtered_values = []
-                for val in unique_values:
-                    val_str = str(val).strip()
-                    if val_str not in existing_data:  # 원본단어에 대한 유의어가 없는 경우만 추가
-                        filtered_values.append(val_str)
-                
-                unique_values = filtered_values
+                unique_values = [v for v in unique_values if v not in existing_words]
                 
                 if not unique_values:
                     print(f"[스킵] {col_name}: 모든 단어가 이미 처리되어 있습니다.")
                     continue
-
-                # 기존 데이터 유지하고 마지막 행부터 추가
-                row_idx = ws.max_row + 1
             else:
-                # skip_existing이 False일 때만 기존 데이터 삭제
+                # 기존 데이터 삭제
                 ws.delete_rows(1, ws.max_row)
-                row_idx = 2  # 첫 번째 행은 헤더용
         else:
             ws = wb.create_sheet(title=col_name)
-            row_idx = 2  # 첫 번째 행은 헤더용
 
-        # 헤더는 시트가 새로 생성되거나 덮어쓰기할 때만 추가
-        if row_idx == 2:
-            ws.cell(row=1, column=1, value="원본")
-            for i in range(3):
-                ws.cell(row=1, column=(2 + i), value=f"유의어{i+1}")
+        # A열 헤더
+        ws.cell(row=1, column=1, value="원본단어")
+        for i in range(3):
+            ws.cell(row=1, column=(2 + i), value=f"유의어{i+1}")
 
-        # 데이터 추가
+        row_idx = 2
         for val in unique_values:
             val_str = val.strip()
             if not val_str:
@@ -277,4 +206,4 @@ def main(skip_existing=True):
 
 if __name__ == "__main__":
     # True: 기존 데이터 있으면 스킵, False: 기존 데이터 덮어쓰기
-    main(skip_existing=True)
+    main(skip_existing=False)

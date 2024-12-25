@@ -26,7 +26,6 @@ def load_synonym_dict(excel_path: str) -> dict:
 
     return synonym_dict
 
-
 def replace_text_with_synonyms(text: str, synonym_dict: dict) -> str:
     """
     text: "ADIDAS 검정 스트라이프 면혼방 티셔츠" 등
@@ -49,7 +48,6 @@ def replace_text_with_synonyms(text: str, synonym_dict: dict) -> str:
         new_text = re.sub(pattern, replacement, new_text)
 
     return new_text
-
 
 def main():
     # 1) 유의어 사전 로드 (1단계 결과물)
