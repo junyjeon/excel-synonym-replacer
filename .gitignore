@@ -5,3 +5,19 @@ build/
 dist/
 __pycache__/
 test/
+
+# 테스트 디렉토리 무시
+test/
+/test/
+tests/
+/tests/
+
+# 빌드 결과물 무시
+dist/
+build/
+*.spec
+__pycache__/
+*.pyc
+
+# 설정 파일 무시
+settings.json
