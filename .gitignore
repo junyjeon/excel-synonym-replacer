@@ -21,3 +21,5 @@ __pycache__/
 
 # 설정 파일 무시
 settings.json
+
+*.xlsx
