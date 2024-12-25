@@ -1,6 +1,11 @@
 # app.py
 import os
-os.environ["QT_QPA_PLATFORM"] = "windows"  # Windows 플랫폼 사용
+# 운영체제별 플랫폼 자동 설정
+import platform
+if platform.system() == "Windows":
+    os.environ["QT_QPA_PLATFORM"] = "windows"
+elif platform.system() == "Linux":
+    os.environ["QT_QPA_PLATFORM"] = "xcb"
 import pandas as pd
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
