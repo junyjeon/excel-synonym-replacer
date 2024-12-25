@@ -1,6 +1,6 @@
 # app.py
 import os
-os.environ["QT_QPA_PLATFORM"] = "xcb"  # Wayland 대신 X11 사용
+os.environ["QT_QPA_PLATFORM"] = "windows"  # Windows 플랫폼 사용
 import pandas as pd
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
