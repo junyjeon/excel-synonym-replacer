@@ -7,14 +7,13 @@ if platform.system() == "Windows":
 elif platform.system() == "Linux":
     os.environ["QT_QPA_PLATFORM"] = "xcb"
 import pandas as pd
-from PySide6.QtWidgets import (
+from PyQt5.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QPushButton, QCheckBox, QSpinBox, QFileDialog, QTableView,
     QStatusBar, QMessageBox, QInputDialog, QProgressDialog, QHeaderView,
-    QTextEdit
+    QTextEdit, QApplication
 )
-from PySide6.QtCore import Qt, QAbstractTableModel, QModelIndex
-from PySide6.QtWidgets import QApplication
+from PyQt5.QtCore import Qt, QAbstractTableModel, QModelIndex
 import json
 import os.path
 
