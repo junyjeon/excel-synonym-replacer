@@ -44,7 +44,7 @@ def generate_titles(excel_path: str, sheet_name: str, col_selection: list,
                     if overwrite or not cell.value:
                         cell.value = title
                         if model:
-                            model._modified_cells.add((row_idx-2, 12+col_idx))
+                            model.update_cell(row_idx-2, 12+col_idx, title)
                 
                 if progress_callback:
                     progress_callback(i, len(rows_to_process))
