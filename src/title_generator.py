@@ -25,7 +25,7 @@ def create_title_combination(row, col_selection, synonym_dict, version_idx):
             if key in synonym_dict and val in synonym_dict[key]:
                 synonyms = synonym_dict[key][val]
                 if synonyms:
-                    all_synonyms = [val] + synonyms
+                    all_synonyms = synonyms + [val]
                     selected_lists.append(all_synonyms)
                 else:
                     selected_lists.append([val])

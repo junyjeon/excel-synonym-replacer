@@ -27,22 +27,13 @@ def generate_titles(excel_path: str, sheet_name: str, col_selection: list,
                 # 각 버전별로 제목 생성
                 titles = []
                 
-                # 첫 번째 조합 생성 및 총 조합 수 확인
-                first_title, total_combinations = create_title_combination(
-                    current_row, col_selection, synonym_dict, 0
-                )
-                
-                if first_title and not first_title.startswith("ERROR"):
-                    titles.append(first_title)
-                    if log_callback:
-                        log_callback(f"버전 1: {first_title}")
-                    
-                    # 나머지 버전 생성
-                    for version in range(1, min(num_versions, total_combinations)):
-                        new_title, _ = create_title_combination(
-                            current_row, col_selection, synonym_dict, version
-                        )
-                        if new_title and new_title not in titles:
+                # 모든 버전을 동일한 방식으로 처리
+                for version in range(num_versions):
+                    new_title, total_combinations = create_title_combination(
+                        current_row, col_selection, synonym_dict, version
+                    )
+                    if new_title and not new_title.startswith("ERROR"):
+                        if new_title not in titles:  # 중복 제거
                             titles.append(new_title)
                             if log_callback:
                                 log_callback(f"버전 {len(titles)}: {new_title}")
