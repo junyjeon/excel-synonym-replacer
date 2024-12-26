@@ -16,7 +16,6 @@ def create_title_combination(row, col_selection, synonym_dict, version_idx):
     
     for key in ordered_keys:
         val = str(row.iloc[col_map[key]]).strip()
-        val = clean_text(val)
         
         if not val:  # 빈 값 스킵
             continue
@@ -25,7 +24,8 @@ def create_title_combination(row, col_selection, synonym_dict, version_idx):
             if key in synonym_dict and val in synonym_dict[key]:
                 synonyms = synonym_dict[key][val]
                 if synonyms:
-                    all_synonyms = synonyms + [val]
+                    # 유의어를 먼저 넣고, 원본은 나중에
+                    all_synonyms = synonyms + [val]  # 다시 원래대로 변경
                     selected_lists.append(all_synonyms)
                 else:
                     selected_lists.append([val])
@@ -46,10 +46,12 @@ def create_title_combination(row, col_selection, synonym_dict, version_idx):
         # 각 유의어 리스트에서 선택할 인덱스 계산
         selected_indices = []
         temp_idx = current_idx
+        divisor = total_combinations
         for syns in selected_lists:
-            length = len(syns)
-            selected_indices.append(temp_idx % length)
-            temp_idx //= length
+            divisor //= len(syns)
+            idx = (temp_idx // divisor) % len(syns)
+            selected_indices.append(idx)
+            temp_idx %= divisor
         
         # 선택된 유의어들 조합
         selected_synonyms = [
@@ -57,10 +59,25 @@ def create_title_combination(row, col_selection, synonym_dict, version_idx):
             for i, idx in enumerate(selected_indices)
         ]
         
-        # 고정값과 선택된 유의어 합치기
-        result = fixed_values + selected_synonyms
-        final_text = " ".join(filter(None, result))
+        # 최종 결과를 만들 때 카테고리 순서대로 정렬
+        ordered_result = []
         
+        # 선택된 유의어와 고정값을 순서대로 배치
+        current_synonym_idx = 0
+        for key in ordered_keys:
+            if key in col_selection:
+                val = str(row.iloc[col_map[key]]).strip()
+                if not val:  # 빈 값이면 스킵
+                    continue
+                ordered_result.append(selected_synonyms[current_synonym_idx])
+                current_synonym_idx += 1
+            else:
+                val = str(row.iloc[col_map[key]]).strip()
+                if val:  # 빈 값이 아닌 경우만 추가
+                    ordered_result.append(val)
+        
+        final_text = " ".join(filter(None, ordered_result))
+        final_text = clean_text(final_text)  # 최종 결과에 clean_text 적용
         return final_text, total_combinations
         
     return " ".join(filter(None, fixed_values)), 0 
