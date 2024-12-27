@@ -6,20 +6,40 @@ def create_title_combination(row, col_selection, synonym_dict, version_idx):
     }
     ordered_keys = ["브랜드", "색상", "패턴", "소재", "카테고리"]
     
-    # 1. ordered_keys 순서로 유의어 리스트 구성
-    ordered_lists = []  # ordered_keys 순서대로 유의어 저장
-    ordered_selections = []  # ordered_keys 순서대로 선택된 카테고리 저장
-    fixed_values = {}  # 선택되지 않은 값 저장
+    ordered_lists = []
+    ordered_selections = []
+    fixed_values = {}
     
     for key in ordered_keys:
         val = str(row.iloc[col_map[key]]).strip()
+        
+        # 1. 먼저 원본값으로 패턴 체크
         if not val or (key == "패턴" and val == "무지"):
             continue
             
+        # 2. clean_text 실행
+        val = clean_text(val)
+        if not val:  # clean_text로 제거되면 스킵
+            continue
+            
+        # 3. 유의어 매칭
         if key in col_selection:
-            if key in synonym_dict and val in synonym_dict[key]:
-                ordered_lists.append(synonym_dict[key][val])
-                ordered_selections.append(key)
+            if key in synonym_dict:
+                matched = False
+                for dict_key, synonyms in synonym_dict[key].items():
+                    if val.strip().lower() == dict_key.strip().lower():
+                        ordered_lists.append(synonyms)
+                        ordered_selections.append(key)
+                        matched = True
+                        break
+                    if val.strip().lower() in [s.strip().lower() for s in synonyms]:
+                        ordered_lists.append([dict_key])
+                        ordered_selections.append(key)
+                        matched = True
+                        break
+                if not matched:
+                    ordered_lists.append([val])
+                    ordered_selections.append(key)
             else:
                 ordered_lists.append([val])
                 ordered_selections.append(key)

@@ -8,8 +8,8 @@ class Colors:
     RESET = '\033[0m'     # 색상 초기화
 
 def test_title_generation():
-    # 1. 테스트 데이터 설정
-    test_row = pd.Series([
+    # 1. 기본 테스트 데이터 설정
+    default_row = pd.Series([
         "",         # A열
         "나이키",   # B열 (브랜드)
         "검정",     # C열 (색상)
@@ -34,7 +34,8 @@ def test_title_generation():
         },
         "소재": {
             "면": ["코튼", "목화", "순면"],
-            "마혼방": ["리넨믹스", "린넨블렌드", "리넨혼합"]
+            "마혼방": ["리넨믹스", "린넨블렌드", "리넨혼합"],
+            "폴리에스터": ["폴리", "폴리에스테르", "폴리섬유"]
         },
         "카테고리": {
             "티셔츠": ["티", "반팔티", "반소매"]
@@ -43,12 +44,11 @@ def test_title_generation():
 
     # 2. 테스트 케이스들
     test_cases = [
-        # 1. 단일 카테고리 선택
         {
             "name": "브랜드만 선택",
             "col_selection": ["브랜드"],
             "expected_versions": [
-                "NIKE 검정 면 티셔츠"  # 원본: "나이키 검정 면 티셔츠" → 브랜드만 변환
+                "NIKE 검정 면 티셔츠"
             ]
         },
         {
@@ -188,6 +188,26 @@ def test_title_generation():
                 "NIKE 검정 면 반팔티",    # 카테고리만 변경
                 "NIKE 검정 면 반소매"
             ]
+        },
+        {
+            "name": "브랜드 매칭 테스트",
+            "col_selection": ["브랜드"],
+            "test_row": pd.Series([
+                "", "더엣지", "검정", "무지", "면", "티셔츠"
+            ]),
+            "expected_versions": [
+                "THE EDGE 검정 면 티셔츠"
+            ]
+        },
+        {
+            "name": "폴리 제거 테스트",
+            "col_selection": ["소재"],
+            "test_row": pd.Series([
+                "", "나이키", "검정", "무지", "폴리", "티셔츠"
+            ]),
+            "expected_versions": [
+                "나이키 검정 티셔츠"
+            ]
         }
     ]
 
@@ -196,17 +216,20 @@ def test_title_generation():
         print(f"\n=== {case['name']} ===")
         print(f"선택된 카테고리: {', '.join(case['col_selection'])}")
         
-        # 원본 값 출력 추가
+        # test_row가 없으면 default_row 사용
+        current_row = case.get("test_row", default_row)
+        
+        # 원본 값 출력
         original = " ".join([
-            str(test_row[1]),  # 브랜드
-            str(test_row[2]),  # 색상
-            str(test_row[4]),  # 소재
-            str(test_row[5])   # 카테고리
+            str(current_row[1]),  # 브랜드
+            str(current_row[2]),  # 색상
+            str(current_row[4]),  # 소재
+            str(current_row[5])   # 카테고리
         ])
         print(f"원본: {original}")
         
         title, total = create_title_combination(
-            test_row,
+            current_row,
             case["col_selection"],
             test_dict,
             version_idx=0
@@ -228,7 +251,7 @@ def test_title_generation():
             print(f"버전 {version+1}:")
             
             next_title, _ = create_title_combination(
-                test_row,
+                current_row,
                 case["col_selection"],
                 test_dict,
                 version_idx=version

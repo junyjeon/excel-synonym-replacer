@@ -79,24 +79,24 @@ def load_synonym_dict_from_sheets(excel_path: str, sheet_names=None) -> Dict[str
         return {}
 
 
-def test_synonym_dict():
-    """유의어 사전 테스트"""
-    test_cases = [
-        ("나이키", ["NIKE"]),
-        ("검정", ["블랙", "BLACK"]),
-        ("면", ["코튼", "cotton"])
-    ]
+# def test_synonym_dict():
+#     """유의어 사전 테스트"""
+#     test_cases = [
+#         ("나이키", ["NIKE"]),
+#         ("검정", ["블랙", "BLACK"]),
+#         ("면", ["코튼", "cotton"])
+#     ]
     
-    # 테스트용 사전 생성
-    test_dict = {
-        "브랜드": {"나이키": ["NIKE"]},
-        "색상": {"검정": ["블랙", "BLACK"]},
-        "소재": {"면": ["코튼", "cotton"]}
-    }
+#     # 테스트용 사전 생성
+#     test_dict = {
+#         "브랜드": {"나이키": ["NIKE"]},
+#         "색상": {"검정": ["블랙", "BLACK"]},
+#         "소재": {"면": ["코튼", "cotton"]}
+#     }
     
-    for orig, expected_syns in test_cases:
-        for category, syn_dict in test_dict.items():
-            if orig in syn_dict:
-                actual_syns = syn_dict[orig]
-                assert set(actual_syns) == set(expected_syns), \
-                    f"\n원본: {orig}\n기대: {expected_syns}\n실제: {actual_syns}"
+#     for orig, expected_syns in test_cases:
+#         for category, syn_dict in test_dict.items():
+#             if orig in syn_dict:
+#                 actual_syns = syn_dict[orig]
+#                 assert set(actual_syns) == set(expected_syns), \
+#                     f"\n원본: {orig}\n기대: {expected_syns}\n실제: {actual_syns}"
