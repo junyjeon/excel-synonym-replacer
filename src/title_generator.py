@@ -34,24 +34,27 @@ def create_title_combination(row, col_selection, synonym_dict, version_idx):
         else:  # 선택되지 않은 카테고리
             fixed_values.append(val)
 
-    # 조합 가능한 총 개수 계산
+    # 선택된 카테고리가 없거나, 모든 선택된 카테고리가 빈 값인 경우
+    if not selected_lists:
+        return " ".join(filter(None, fixed_values)), 0
+        
+    # 각 카테고리의 유의어 개수
+    lengths = [len(syns) for syns in selected_lists]
     total_combinations = 1
-    for syns in selected_lists:
-        total_combinations *= len(syns)
+    for length in lengths:
+        total_combinations *= length
     
     if total_combinations > 0:
-        # 현재 버전에 해당하는 조합 선택
-        current_idx = version_idx % total_combinations
-        
-        # 각 유의어 리스트에서 선택할 인덱스 계산
+        # 중복 없이 순차적으로 조합 생성
+        current = version_idx % total_combinations
         selected_indices = []
-        temp_idx = current_idx
-        divisor = total_combinations
-        for syns in selected_lists:
-            divisor //= len(syns)
-            idx = (temp_idx // divisor) % len(syns)
+        
+        # 각 카테고리별로 인덱스 계산
+        temp = current
+        for length in lengths:
+            idx = temp % length
+            temp //= length
             selected_indices.append(idx)
-            temp_idx %= divisor
         
         # 선택된 유의어들 조합
         selected_synonyms = [

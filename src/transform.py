@@ -8,15 +8,16 @@ def generate_titles(excel_path: str, sheet_name: str, col_selection: list,
                    overwrite=True):
     """엑셀 파일의 제목들을 유의어로 변환하여 M, N, O열에 저장"""
     try:
-        df = pd.read_excel(excel_path, sheet_name=sheet_name)
         wb = openpyxl.load_workbook(excel_path)
         ws = wb[sheet_name]
+        df = pd.read_excel(excel_path, sheet_name=sheet_name)
         
         rows_to_process = selected_rows or range(2, len(df) + 2)
         
         if log_callback:
             log_callback(f"처리 시작: 총 {len(rows_to_process)}개 행")
         
+        # 각 행마다
         for i, row_idx in enumerate(rows_to_process, 1):
             try:
                 current_row = df.iloc[row_idx - 2]
@@ -33,18 +34,16 @@ def generate_titles(excel_path: str, sheet_name: str, col_selection: list,
                         current_row, col_selection, synonym_dict, version
                     )
                     if new_title and not new_title.startswith("ERROR"):
-                        if new_title not in titles:  # 중복 제거
+                        if new_title not in titles:  # 중복 체크는 유지
                             titles.append(new_title)
                             if log_callback:
-                                log_callback(f"버전 {len(titles)}: {new_title}")
+                                log_callback(f"버전 {version+1}: {new_title}")  # version+1로 수정
                 
                 # 결과 저장
-                for col_idx, title in enumerate(titles[:num_versions]):
+                for col_idx, title in enumerate(titles[:num_versions]):  # 버전 수 제한 유지
                     cell = ws.cell(row=row_idx, column=13 + col_idx)
                     if overwrite or not cell.value:
                         cell.value = title
-                        if model:
-                            model.update_cell(row_idx-2, 12+col_idx, title)
                 
                 if progress_callback:
                     progress_callback(i, len(rows_to_process))
@@ -54,7 +53,15 @@ def generate_titles(excel_path: str, sheet_name: str, col_selection: list,
                     log_callback(f"[오류] {row_idx}행 처리 실패: {str(e)}")
                 continue
         
+        # 먼저 파일 저장
         wb.save(excel_path)
+        
+        # 그 다음 UI 업데이트 (모든 버전에 대해)
+        if model:
+            for row_idx in rows_to_process:
+                for col_idx, title in enumerate(titles[:num_versions]):  # 버전 수 제한 유지
+                    model.update_cell(row_idx-2, 12+col_idx, title)
+        
         if log_callback:
             log_callback("\n완료! M, N, O열에 저장되었습니다.")
         
