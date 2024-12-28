@@ -75,11 +75,11 @@ def generate_titles(file_path, sheet_name, col_selection, synonym_dict, selected
                     log_callback(f"[오류] {row_idx}행 처리 실패: {str(e)}")
                 continue
         
-        # 디버깅: 저장 전 상태 확인
-        if log_callback:
-            log_callback("\n=== 저장 전 DataFrame ===")
-            log_callback(f"컬럼 목록: {df.columns.tolist()}")
-            log_callback(f"데이터:\n{df}")
+        # # 디버깅: 저장 전 상태 확인
+        # if log_callback:
+        #     log_callback("\n=== 저장 전 DataFrame ===")
+        #     log_callback(f"컬럼 목록: {df.columns.tolist()}")
+        #     log_callback(f"데이터:\n{df}")
         
         # 변경된 데이터프레임 저장
         df = df.astype(str)
