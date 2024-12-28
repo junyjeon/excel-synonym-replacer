@@ -38,6 +38,7 @@ def create_title_combination(row, col_selection, synonym_dict, version_idx):
                         matched = True
                         break
                 if not matched:
+                    # 사전에 없는 값은 원본값 그대로 사용
                     ordered_lists.append([val])
                     ordered_selections.append(key)
             else:
@@ -71,13 +72,16 @@ def create_title_combination(row, col_selection, synonym_dict, version_idx):
     for key in ordered_keys:
         if key in ordered_selections:
             # 선택된 카테고리는 유의어 사용
-            result.append(ordered_lists[current_synonym_idx][selected_indices[current_synonym_idx]])
+            val = ordered_lists[current_synonym_idx][selected_indices[current_synonym_idx]]
+            result.append(val.strip())  # 앞뒤 공백 제거
             current_synonym_idx += 1
         else:
             # 선택되지 않은 카테고리는 원본 값 사용
-            result.append(fixed_values.get(key, ''))
+            val = fixed_values.get(key, '')
+            if val:
+                result.append(val.strip())  # 앞뒤 공백 제거
     
-    final_text = " ".join(filter(None, result))
-    final_text = clean_text(final_text)
+    # 결과 문자열 생성 (공백으로 구분)
+    final_text = ' '.join(result)  # filter(None, result) 제거
     
     return final_text, total_combinations 

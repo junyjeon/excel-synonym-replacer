@@ -7,12 +7,18 @@ def test_generate_titles():
     # 1. 테스트용 엑셀 파일 생성
     test_df = pd.DataFrame({
         'A': ['', '', ''],
-        'B': ['아디다스', 'US폴로아센', '더엣지'],     # 브랜드
-        'C': ['블랙', '네이비', '스카이블루'],         # 색상
-        'D': ['무지', '스트라이프', '도트무늬'],       # 패턴
-        'E': ['면', '폴리', '마혼방'],                # 소재
-        'F': ['맨투맨', '맨투맨티', '니트카라티']      # 카테고리
-    })
+        'B': ['아디다스', 'US폴로아센', '더엣지'],
+        'C': ['블랙', '네이비', '스카이블루'],
+        'D': ['무지', '스트라이프', '도트무늬'],
+        'E': ['면', '폴리', '마혼방'],
+        'F': ['맨투맨', '맨투맨티', '니트카라티'],
+    }, dtype=str)  # 모든 열을 문자열로 설정
+
+    # 상품명 열 추가
+    for ver in range(1, 4):
+        test_df[f'상품명_{ver}'] = ''
+
+    test_df = test_df.astype(str)  # 전체 DataFrame을 문자열로 변환
     
     test_file = "test_data.xlsx"
     test_df.to_excel(test_file, index=False)
@@ -27,7 +33,7 @@ def test_generate_titles():
         "색상": {
             "블랙": ["진검정", "흑색", "검정색"],
             "네이비": ["곤색", "남색", "짙은파랑"],
-            "스카이블루": ["하늘색", "연파랑", "옅파랑"]
+            "스카이블루": ["하늘색", "연파랑", "옅랑"]
         },
         "패턴": {
             "스트라이프": ["줄무늬", "선무늬", "라인"],
@@ -67,23 +73,25 @@ def test_generate_titles():
             print(f"\n=== {case['name']} 테스트 ===")
             
             generate_titles(
-                excel_path=test_file,
+                file_path=test_file,
                 sheet_name="Sheet1",
                 col_selection=case["col_selection"],
                 synonym_dict=test_dict,
                 selected_rows=[case["row"]],
-                num_versions=3,
+                version_count=3,
+                progress_callback=None,
+                log_callback=print,
+                model=None,
                 overwrite=True
             )
             
             # 결과 검증
-            wb = openpyxl.load_workbook(test_file)
-            ws = wb["Sheet1"]
+            result_df = pd.read_excel(test_file)  # 먼저 DataFrame으로 읽기
             
             for col, expected in case["expected"].items():
-                col_idx = ord(col) - ord('A') + 1
-                actual = ws.cell(row=case["row"], column=col_idx).value
-                print(f"{col}열 검증:")
+                col_name = f'상품명_{ord(col) - ord("M") + 1}'  # M -> 상품명_1
+                actual = result_df[col_name].iloc[case["row"]-2]  # 0-based index
+                print(f"{col}열 ({col_name}) 검증:")
                 print(f"기대값: {expected}")
                 print(f"실제값: {actual}")
                 assert actual == expected, f"{col}열 값이 일치하지 않습니다"

@@ -278,9 +278,10 @@ class MainWindow(QMainWindow):
                 self.synonym_dict,
                 selected_rows,
                 self.spin_version.value(),
-                lambda current, total: progress.setValue(current),   # 진행도 업데이트
+                lambda current, total: progress.setValue(current),
                 self.update_log,
-                self._model
+                self._model,
+                overwrite=self.chk_overwrite.isChecked()
             )
 
         except Exception as e:
@@ -343,11 +344,3 @@ class MainWindow(QMainWindow):
         """프로그램 종료 시 설정 저장"""
         self.saveSettings()
         super().closeEvent(event)
-
-
-if __name__ == "__main__":
-    import sys
-    app = QApplication(sys.argv)
-    window = MainWindow()
-    window.show()
-    sys.exit(app.exec())
