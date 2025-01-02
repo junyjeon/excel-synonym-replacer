@@ -14,9 +14,9 @@ def test_generate_titles():
         'F': ['맨투맨', '맨투맨티', '니트카라티'],
     }, dtype=str)  # 모든 열을 문자열로 설정
 
-    # 상품명 열 추가
+    # 유의어 열 추가
     for ver in range(1, 4):
-        test_df[f'상품명_{ver}'] = ''
+        test_df[f'유의어_{ver}'] = ''
 
     test_df = test_df.astype(str)  # 전체 DataFrame을 문자열로 변환
     
@@ -89,7 +89,7 @@ def test_generate_titles():
             result_df = pd.read_excel(test_file)  # 먼저 DataFrame으로 읽기
             
             for col, expected in case["expected"].items():
-                col_name = f'상품명_{ord(col) - ord("M") + 1}'  # M -> 상품명_1
+                col_name = f'유의어_{ord(col) - ord("M") + 1}'  # M -> 유의어_1
                 actual = result_df[col_name].iloc[case["row"]-2]  # 0-based index
                 print(f"{col}열 ({col_name}) 검증:")
                 print(f"기대값: {expected}")

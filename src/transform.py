@@ -12,15 +12,29 @@ def generate_titles(file_path, sheet_name, col_selection, synonym_dict, selected
         overwrite (bool): 기존 제목을 덮어쓸지 여부
     """
     try:
+        # 1. 기존 워크북 열기 (모든 서식과 내용 유지)
         wb = openpyxl.load_workbook(file_path)
         ws = wb[sheet_name]
         
-        # 문자열로 읽기
+        if log_callback:
+            log_callback("\n=== 처리 전 Excel 데이터 ===")
+            log_callback(f"I열(쇼핑몰 제목 초안): {[ws.cell(row=i, column=9).value for i in range(2, 5)]}")
+            log_callback(f"L열(쇼핑몰 기본설명): {[ws.cell(row=i, column=12).value for i in range(2, 5)]}")
+        
+        # 2. 현재 시트 데이터 읽기
         df = pd.read_excel(file_path, sheet_name=sheet_name, dtype=str)
         
-        # 상품명 열이 없으면 추가
+        if log_callback:
+            log_callback("\n=== DataFrame 읽은 후 ===")
+            log_callback(f"컬럼 목록: {df.columns.tolist()}")
+            if '쇼핑몰 제목 초안' in df.columns:
+                log_callback(f"I열 데이터: {df['쇼핑몰 제목 초안'].head(3).tolist()}")
+            if '쇼핑몰 기본설명' in df.columns:
+                log_callback(f"L열 데이터: {df['쇼핑몰 기본설명'].head(3).tolist()}")
+        
+        # 메모리상의 DataFrame에만 유의어 열 추가
         for ver in range(1, version_count + 1):
-            col_name = f'상품명_{ver}'
+            col_name = f'유의어_{ver}'
             if col_name not in df.columns:
                 df[col_name] = ''
         
@@ -53,7 +67,7 @@ def generate_titles(file_path, sheet_name, col_selection, synonym_dict, selected
                 
                 if titles:  # 생성된 제목이 있는 경우
                     for ver, title in enumerate(titles, 1):  # 1부터 시작
-                        col_name = f'상품명_{ver}'  # 열 이름으로 접근
+                        col_name = f'유의어_{ver}'  # 열 이름으로 접근
                         if overwrite:
                             # 무조건 덮어쓰기
                             df.loc[row_idx-2, col_name] = str(title)  # 문자열로 명시적 변환
@@ -81,21 +95,33 @@ def generate_titles(file_path, sheet_name, col_selection, synonym_dict, selected
         #     log_callback(f"컬럼 목록: {df.columns.tolist()}")
         #     log_callback(f"데이터:\n{df}")
         
-        # 변경된 데이터프레임 저장
-        df = df.astype(str)
-        df.to_excel(file_path, sheet_name=sheet_name, index=False)
+        # 3. M열부터만 데이터 업데이트
+        for ver in range(1, version_count + 1):
+            col_idx = 13 + ver - 1  # M열(13)부터 시작
+            
+            # 열 제목 설정
+            ws.cell(row=1, column=col_idx, value=f'유의어_{ver}')
+            
+            # 데이터 업데이트
+            for row_idx in range(len(df)):
+                value = df.iloc[row_idx, df.columns.get_loc(f'유의어_{ver}')]
+                ws.cell(row=row_idx+2, column=col_idx, value=value)
         
-        # 디버깅: 저장 후 상태 확인
+        if log_callback:
+            log_callback("\n=== 저장 전 Excel 데이터 ===")
+            log_callback(f"I열(쇼핑몰 제목 초안): {[ws.cell(row=i, column=9).value for i in range(2, 5)]}")
+            log_callback(f"L열(쇼핑몰 기본설명): {[ws.cell(row=i, column=12).value for i in range(2, 5)]}")
+        
+        # 4. 워크북 저장
+        wb.save(file_path)
+        
+        # 5. 저장 후 확인
         wb = openpyxl.load_workbook(file_path)
         ws = wb[sheet_name]
         if log_callback:
-            log_callback("\n=== 저장 후 Excel ===")
-            for col in ['M', 'N', 'O']:
-                col_idx = 13 + (ord(col) - ord('M'))
-                val = ws.cell(row=2, column=col_idx).value
-                log_callback(f"{col}열 값: {val}")
-        
-        wb.save(file_path)
+            log_callback("\n=== 저장 후 Excel 데이터 ===")
+            log_callback(f"I열(쇼핑몰 제목 초안): {[ws.cell(row=i, column=9).value for i in range(2, 5)]}")
+            log_callback(f"L열(쇼핑몰 기본설명): {[ws.cell(row=i, column=12).value for i in range(2, 5)]}")
         
         if log_callback:
             log_callback("\n완료!")

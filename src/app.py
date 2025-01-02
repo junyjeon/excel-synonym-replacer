@@ -82,8 +82,8 @@ class MainWindow(QMainWindow):
             category_group.addWidget(chk)
         opt_layout.addLayout(category_group)
 
-        # 구분선
-        opt_layout.addWidget(QLabel(" | "))
+        # # 구분선
+        # opt_layout.addWidget(QLabel(" | "))
 
         # 오른쪽: 설정 그룹
         settings_group = QHBoxLayout()
@@ -109,6 +109,11 @@ class MainWindow(QMainWindow):
         self.btn_transform = QPushButton("실행")
         self.btn_transform.clicked.connect(self.transform_data)
         settings_group.addWidget(self.btn_transform)
+
+        # 전체 선택 버튼 추가
+        self.btn_select_all = QPushButton("전체 선택")
+        self.btn_select_all.clicked.connect(self.select_all_rows)
+        settings_group.addWidget(self.btn_select_all)
 
         opt_layout.addLayout(settings_group)
         main_layout.addLayout(opt_layout)
@@ -185,14 +190,12 @@ class MainWindow(QMainWindow):
                             f"유의어 사전 로드 완료: {len(self.synonym_dict)}개 단어"
                         )
                     else:
-                        QMessageBox.warning(
-                            self,
+                        self.show_message(
                             "경고",
                             "유의어 사전 시트(브랜드,색상,패턴,소재,카테고리)를 찾을 수 없습니다."
                         )
                 except Exception as e:
-                    QMessageBox.warning(
-                        self,
+                    self.show_message(
                         "경고",
                         f"유의어 사전 로드 실패: {str(e)}"
                     )
@@ -223,18 +226,18 @@ class MainWindow(QMainWindow):
             self.label_file.setText(f"불러온 파일: {path} ({sheet_name})")
             self.status_bar.showMessage(f"{len(df)} 행 로드 완료")
         except Exception as e:
-            QMessageBox.critical(self, "오류", f"파일 열기 실패: {e}")
+            self.show_message("오류", f"파일 열기 실패: {e}")
 
     def transform_data(self):
         """유의어 치환 실행"""
         try:
             # 기본 검증
             if self._df.empty:
-                QMessageBox.warning(self, "경고", "먼저 파일을 열어주세요.")
+                self.show_message("경고", "먼저 파일을 열어주세요.")
                 return
             
             if not self.synonym_dict:
-                QMessageBox.warning(self, "경고", "유의어 사전이 로드되지 않았습니다.")
+                self.show_message("경고", "유의어 사전이 로드되지 않았습니다.")
                 return
 
             # 선택된 카테고리
@@ -251,18 +254,23 @@ class MainWindow(QMainWindow):
                 col_selection.append("카테고리")
 
             if not col_selection:
-                QMessageBox.warning(self, "경고", "하나 이상의 카테고리를 선택해주세요.")
+                self.show_message("경고", "하나 이상의 카테고리를 선택해주세요.")
                 return
 
             # 선택된 행(Excel 기준으로 +2 offset)
             selected_rows = [idx.row() + 2 for idx in self.table_view.selectionModel().selectedRows()]
             if not selected_rows:
-                QMessageBox.warning(self, "경고", "행을 선택해주세요.")
+                self.show_message("경고", "행을 선택해주세요.")
                 return
 
             # 진행 상태 다이얼로그
             progress = QProgressDialog("처리 중...", "취소", 0, len(selected_rows), self)
             progress.setWindowModality(Qt.WindowModal)
+            progress.setWindowFlags(progress.windowFlags() | Qt.WindowStaysOnTopHint)
+            progress.move(
+                self.x() + (self.width() - progress.width()) // 2,
+                self.y() + (self.height() - progress.height()) // 2
+            )
 
             # 로그창 초기화
             self.log_text.clear()
@@ -285,7 +293,7 @@ class MainWindow(QMainWindow):
             )
 
         except Exception as e:
-            QMessageBox.critical(self, "오류", f"제목 생성 중 오류 발생: {str(e)}")
+            self.show_message("오류", f"제목 생성 중 오류 발생: {str(e)}")
 
     def on_selection_changed(self, selected, deselected):
         """테이블 선택 변경 시 상태바에 선택 행 수 표시"""
@@ -344,3 +352,24 @@ class MainWindow(QMainWindow):
         """프로그램 종료 시 설정 저장"""
         self.saveSettings()
         super().closeEvent(event)
+
+    def select_all_rows(self):
+        """모든 행 선택"""
+        if not self._df.empty:
+            self.table_view.selectAll()
+
+    def show_message(self, title, message):
+        msg = QMessageBox(parent=self)
+        msg.setWindowTitle(title)
+        msg.setText(message)
+        msg.setStandardButtons(QMessageBox.Ok)
+        msg.setDefaultButton(QMessageBox.Ok)
+        
+        # 화면 중앙에 표시
+        msg.setWindowModality(Qt.ApplicationModal)
+        msg.move(
+            self.x() + (self.width() - msg.width()) // 2,
+            self.y() + (self.height() - msg.height()) // 2
+        )
+        
+        return msg.exec()
