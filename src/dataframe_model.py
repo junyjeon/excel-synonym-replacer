@@ -25,9 +25,20 @@ class DataFrameModel(QAbstractTableModel):
             return None
             
         if role == Qt.DisplayRole:
-            value = self._df.iloc[index.row(), index.column()]
-            return str(value) if pd.notna(value) else ""
-            
+            try:
+                value = self._df.iloc[index.row(), index.column()]
+                
+                # 바코드 열의 경우 정수로 표시
+                if self._df.columns[index.column()] == '바코드' and pd.notnull(value):
+                    return str(int(float(value)))
+
+                # 모든 값을 문자열로 변환하여 반환 (None이나 빈 문자열도 처리)
+                return str(value) if pd.notnull(value) and value != '' else value
+                
+            except Exception as e:
+                print(f"데이터 표시 오류: {str(e)}")
+                return ''
+
         return None
         
     def headerData(self, section: int, orientation: Qt.Orientation, role: int = Qt.DisplayRole) -> Optional[str]:

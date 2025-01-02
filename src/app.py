@@ -3,6 +3,7 @@
 import os
 import json
 import platform
+import openpyxl
 
 # 운영체제별 플랫폼 자동 설정
 if platform.system() == "Windows":
@@ -82,8 +83,8 @@ class MainWindow(QMainWindow):
             category_group.addWidget(chk)
         opt_layout.addLayout(category_group)
 
-        # # 구분선
-        # opt_layout.addWidget(QLabel(" | "))
+        # 구분선
+        opt_layout.addWidget(QLabel(" | "))
 
         # 오른쪽: 설정 그룹
         settings_group = QHBoxLayout()
@@ -203,28 +204,61 @@ class MainWindow(QMainWindow):
     def load_excel_file(self, path: str):
         """엑셀 파일 로드 및 시트 선택"""
         try:
-            wb = pd.ExcelFile(path)
-            if len(wb.sheet_names) > 1:
-                sheet_name, ok = QInputDialog.getItem(
-                    self,
-                    "시트 선택",
-                    "처리할 시트를 선택하세요:",
-                    wb.sheet_names,
-                    0,
-                    False
-                )
-                if not ok:
-                    return
-            else:
-                sheet_name = wb.sheet_names[0]
+            wb = None
+            wb_values = None
+            try:
+                # 수식 보존을 위해 data_only=False로 읽기
+                wb = openpyxl.load_workbook(path)
+                # 수식 결과를 얻기 위해 data_only=True로 다시 읽기
+                wb_values = openpyxl.load_workbook(path, data_only=True)
+                
+                if len(wb.sheetnames) > 1:
+                    sheet_name, ok = QInputDialog.getItem(
+                        self,
+                        "시트 선택",
+                        "처리할 시트를 선택하세요:",
+                        wb.sheetnames,
+                        0,
+                        False
+                    )
+                    if not ok:
+                        wb.close()
+                        return
+                else:
+                    sheet_name = wb.sheetnames[0]
 
-            df = pd.read_excel(path, sheet_name=sheet_name)
-            self._df = df
-            self._model.setDataFrame(df)
-            self.file_path = path
-            self.current_sheet = sheet_name
-            self.label_file.setText(f"불러온 파일: {path} ({sheet_name})")
-            self.status_bar.showMessage(f"{len(df)} 행 로드 완료")
+                ws = wb[sheet_name]
+                
+                # 데이터를 직접 읽어서 DataFrame 생성
+                data = []
+                headers = []
+                for cell in ws[1]:
+                    headers.append(cell.value)
+                
+                ws_values = wb_values[sheet_name]
+                
+                for row in ws_values.iter_rows(min_row=2):
+                    row_data = []
+                    for cell in row:
+                        value = cell.value if cell.value is not None else ''
+                        row_data.append(str(value))
+                    data.append(row_data)
+                
+                df = pd.DataFrame(data, columns=headers)
+
+                self._df = df
+                self._model.setDataFrame(df)
+                self.file_path = path
+                self.current_sheet = sheet_name
+                self.label_file.setText(f"불러온 파일: {path} ({sheet_name})")
+                self.status_bar.showMessage(f"{len(df)} 행 로드 완료")
+
+            finally:
+                if wb:
+                    wb.close()
+                if wb_values:
+                    wb_values.close()
+
         except Exception as e:
             self.show_message("오류", f"파일 열기 실패: {e}")
 

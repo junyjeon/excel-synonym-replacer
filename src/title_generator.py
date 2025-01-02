@@ -1,9 +1,11 @@
 from text_cleaner import clean_text
 
 def create_title_combination(row, col_selection, synonym_dict, version_idx):
-    col_map = {
-        "브랜드": 1, "색상": 2, "패턴": 3, "소재": 4, "카테고리": 5
+    # B~F열의 인덱스 (0~4)
+    col_indices = {
+        "브랜드": 0, "색상": 1, "패턴": 2, "소재": 3, "카테고리": 4
     }
+    
     ordered_keys = ["브랜드", "색상", "패턴", "소재", "카테고리"]
     
     ordered_lists = []
@@ -11,7 +13,7 @@ def create_title_combination(row, col_selection, synonym_dict, version_idx):
     fixed_values = {}
     
     for key in ordered_keys:
-        val = str(row.iloc[col_map[key]]).strip()
+        val = str(row.iloc[col_indices[key]]).strip()
         
         # 1. 먼저 원본값으로 패턴 체크
         if not val or (key == "패턴" and val == "무지"):
