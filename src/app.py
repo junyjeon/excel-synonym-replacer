@@ -291,12 +291,19 @@ class MainWindow(QMainWindow):
                 self.show_message("경고", "하나 이상의 카테고리를 선택해주세요.")
                 return
 
-            # 선택된 행(Excel 기준으로 +2 offset)
-            selected_rows = [idx.row() + 2 for idx in self.table_view.selectionModel().selectedRows()]
+            # 선택된 행 가져오기 (0-based)
+            selected_rows = []
+            for idx in self.table_view.selectionModel().selectedRows():
+                selected_rows.append(idx.row())  # +2 제거
+                
             if not selected_rows:
                 self.show_message("경고", "행을 선택해주세요.")
                 return
 
+            # 버전 수 가져오기
+            version_count = self.spin_version.value()
+            # print(f"[DEBUG] Using version count from spinbox: {version_count}")
+            
             # 진행 상태 다이얼로그
             progress = QProgressDialog("처리 중...", "취소", 0, len(selected_rows), self)
             progress.setWindowModality(Qt.WindowModal)
@@ -318,8 +325,8 @@ class MainWindow(QMainWindow):
                 self.current_sheet,
                 col_selection,
                 self.synonym_dict,
-                selected_rows,
-                self.spin_version.value(),
+                selected_rows,  # 0-based 인덱스로 전달
+                version_count,  # spin_version의 값 사용
                 lambda current, total: progress.setValue(current),
                 self.update_log,
                 self._model,
