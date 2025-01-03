@@ -6,82 +6,46 @@ import time
 
 def generate_titles(file_path, sheet_name, col_selection, synonym_dict, selected_rows, 
                    version_count, progress_callback, log_callback, model, overwrite=True):
-    """
-    유의어 치환으로 새로운 제목 생성
-    
-    Args:
-        ...
-        overwrite (bool): 기존 제목을 덮어쓸지 여부
-    """
+    """유의어 치환으로 새로운 제목 생성"""
     try:
         wb = None
-        wb_values = None
         try:
-            # 수식용과 값용 워크북을 따로 열기
-            wb = openpyxl.load_workbook(file_path)  # 수식 보존용
-            wb_values = openpyxl.load_workbook(file_path, data_only=True)  # 값 읽기용
-            
+            # 수식용 워크북 열기
+            wb = openpyxl.load_workbook(file_path)
             ws = wb[sheet_name]
-            ws_values = wb_values[sheet_name]
 
-            # DataFrame은 계산된 값으로 만들기
+            # DataFrame은 모델에서 가져오기
             if model:
                 df = model._df.copy()
             else:
-                data = []
-                headers = []
-                for cell in ws[1]:  # 헤더는 수식이 없으므로 그대로
-                    headers.append(cell.value)
-                
-                for row in ws_values.iter_rows(min_row=2):  # 데이터는 계산된 값으로
-                    row_data = []
-                    for cell in row:
-                        value = cell.value if cell.value is not None else ''
-                        row_data.append(str(value))
-                    data.append(row_data)
-                
-                df = pd.DataFrame(data, columns=headers)
+                raise Exception("모델이 없습니다.")
 
-            # 상품명 열이 없으면 추가
+            # 상품명 열이 없으면 추가 (모든 버전에 대해)
             for ver in range(1, version_count + 1):
                 col_name = f'상품명_{ver}'
                 if col_name not in df.columns:
                     df[col_name] = ''
 
-            # 디버깅: 실제 컬럼명 출력
-            print("\n=== 엑셀 파일의 실제 컬럼명 ===")
-            print(df.columns.tolist())
-
-            # 필요한 컬럼 매핑 (실제 엑셀 컬럼명이 다를 수 있음)
-            column_mapping = {
-                '브랜드': ['브랜드', 'brand', '브랜드명'],
-                '색상': ['색상', 'color', '컬러'],
-                '패턴': ['패턴', 'pattern'],
-                '소재': ['소재', '소재 ', 'material', '재질'],
-                '카테고리': ['카테고리', 'category', '분류']
-            }
-
-            # 실제 컬럼명으로 매핑
+            # 실제 컬럼명 매핑 (체크된 항목만)
             actual_columns = {}
-            for key, possible_names in column_mapping.items():
-                found = False
-                # 실제 컬럼명에서 앞뒤 공백을 제거하고 비교
-                for name in possible_names:
-                    if any(name.strip() == col.strip() for col in df.columns):
-                        # 매칭된 실제 컬럼명 찾기
-                        actual_name = next(col for col in df.columns if name.strip() == col.strip())
-                        actual_columns[key] = actual_name
-                        found = True
-                        break
-                if not found:
-                    raise Exception(f"'{key}' 컬럼을 찾을 수 없습니다. 가능한 이름: {possible_names}")
+            for key in col_selection:  # 체크된 항목만 처리
+                possible_names = {
+                    '브랜드': ['브랜드', 'brand', '브랜드명'],
+                    '색상': ['색상', 'color', '컬러'],
+                    '패턴': ['패턴', 'pattern'],
+                    '소재': ['소재', '소재 ', 'material', '재질'],
+                    '카테고리': ['카테고리', 'category', '분류']
+                }.get(key, [key])
 
-            # 컬럼 인덱스 계산
-            col_indices = {key: df.columns.get_loc(actual_name) 
-                         for key, actual_name in actual_columns.items()}
+                # 실제 컬럼 찾기 (없으면 스킵)
+                for name in possible_names:
+                    if any(col.strip() == name.strip() for col in df.columns):
+                        actual_name = next(col for col in df.columns if col.strip() == name.strip())
+                        actual_columns[key] = actual_name
+                        break
 
             if not selected_rows:
-                selected_rows = range(2, ws.max_row + 1)
+                selected_rows = range(2, len(df) + 2)
 
             if log_callback:
                 log_callback(f"처리 시작: 총 {len(selected_rows)}개 행")
@@ -89,34 +53,31 @@ def generate_titles(file_path, sheet_name, col_selection, synonym_dict, selected
             # 각 선택된 행에 대해 처리
             for i, row_idx in enumerate(selected_rows, 1):
                 try:
-                    # DataFrame에서 데이터 읽기 - 매핑된 컬럼명 사용
-                    current_row = pd.Series({
-                        key: str(df.iloc[row_idx-2, col_indices[key]]).strip()
-                        for key in column_mapping.keys()
-                    })
+                    # DataFrame에서 데이터 읽기 (매핑된 컬럼만)
+                    current_row = {}
+                    for key, col_name in actual_columns.items():
+                        value = str(df.iloc[row_idx-2][col_name]).strip()
+                        current_row[key] = value
 
                     # 유의어 치환으로 새 제목들 생성
                     titles = []
                     for version in range(version_count):
-                        new_title, _ = create_title_combination(current_row, col_selection, synonym_dict, version)
+                        new_title, _ = create_title_combination(
+                            pd.Series(current_row), 
+                            col_selection, 
+                            synonym_dict, 
+                            version
+                        )
                         if new_title and not new_title.startswith("ERROR"):
                             titles.append(new_title)
 
-                    # M열만 수정하고 저장
-                    for ver, title in enumerate(titles):
-                        col_idx = 13 + ver  # M열이 13번째 열
-                        if overwrite:
-                            ws.cell(row=row_idx, column=col_idx, value=title)
+                    # 제목 열 업데이트 (모든 버전)
+                    for ver, title in enumerate(titles, 1):
+                        col_name = f'상품명_{ver}'
+                        if overwrite or not df.iloc[row_idx-2][col_name]:
+                            df.iloc[row_idx-2, df.columns.get_loc(col_name)] = title
                             if model:
-                                model._df.iloc[row_idx-2, col_idx-1] = title
-                                model.update_cell(row_idx-2, col_idx-1, title)
-                        else:
-                            old_value = ws.cell(row=row_idx, column=col_idx).value
-                            if not old_value:
-                                ws.cell(row=row_idx, column=col_idx, value=title)
-                                if model:
-                                    model._df.iloc[row_idx-2, col_idx-1] = title
-                                    model.update_cell(row_idx-2, col_idx-1, title)
+                                model.update_cell(row_idx-2, df.columns.get_loc(col_name), title)
 
                     if progress_callback:
                         progress_callback(i, len(selected_rows))
@@ -128,13 +89,11 @@ def generate_titles(file_path, sheet_name, col_selection, synonym_dict, selected
                     continue
 
             # 변경사항 저장
-            wb.save(file_path)
+            df.to_excel(file_path, index=False)
 
         finally:
             if wb:
                 wb.close()
-
-        time.sleep(0.1)  # 파일 시스템 동기화 대기
 
         if log_callback:
             log_callback("\n완료!")
