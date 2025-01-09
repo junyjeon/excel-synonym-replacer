@@ -1,5 +1,9 @@
 from text_cleaner import clean_text
-import pandas as pd
+from title_generator.config import ORDERED_COLUMNS, DEFAULT_VALUES
+from title_generator.preprocessor import prepare_data
+from title_generator.synonym_matcher import find_synonyms
+from title_generator.version_calc import calculate_version_indices
+from title_generator.result_builder import generate_result
 
 def create_title_combination(row, col_selection, synonym_dict, version_idx):
     """
@@ -12,70 +16,43 @@ def create_title_combination(row, col_selection, synonym_dict, version_idx):
         version_idx: 버전 인덱스 (0부터 시작)
     """
     try:
-        # 선택된 컬럼별 유의어 리스트
         ordered_lists = []
         ordered_selections = []
+        
+        # 1. 데이터 전처리
+        processed_data = prepare_data(row, ORDERED_COLUMNS)
         fixed_values = {}
         
-        # 순서가 있는 컬럼 처리 (브랜드 → 색상 → 패턴 → 소재 → 카테고리)
-        ordered_columns = ['브랜드', '색상', '패턴', '소재', '카테고리']
-        
-        # 각 컬럼 처리
-        for key in ordered_columns:
-            # 컬럼이 없거나 값이 비어있는 경우 빈 문자열로 처리
-            value = str(row.get(key, '')).strip()
-            
-            # 유의어 확인 - 선택된 컬럼만 치환
-            if key in synonym_dict and key in col_selection and value:  # 값이 있는 경우만 치환 시도
-                synonyms = []
-                
-                # 직접 매칭 확인
-                for dict_key, syn_list in synonym_dict[key].items():
-                    # 대소문자 구분 없이 매칭
-                    if value.lower().strip() == dict_key.lower().strip():
-                        if isinstance(syn_list, str):  # 단일 문자열이면 리스트로 변환
-                            synonyms = [syn_list]
-                        else:
-                            synonyms = syn_list
-                        break
-                
+        # 2. 컬럼별 유의어 처리
+        for key, value in processed_data.items():
+            # value가 문자열이고 비어있지 않은지 명시적으로 확인
+            value_str = str(value).strip()
+            if key in synonym_dict and key in col_selection and value_str:
+                synonyms = find_synonyms(value_str, synonym_dict[key])
                 if synonyms:
                     ordered_lists.append(synonyms)
                     ordered_selections.append(key)
                 else:
-                    fixed_values[key] = value  # 사전에 없으면 원본값
+                    fixed_values[key] = value_str
             else:
-                fixed_values[key] = value  # 선택 안된 컬럼은 원본값
+                fixed_values[key] = value_str
         
-        # 버전에 따른 인덱스 계산
-        total_combinations = 1
-        for synonyms in ordered_lists:
-            total_combinations *= len(synonyms)
-            
-        selected_indices = []
-        remaining = version_idx % total_combinations if ordered_lists else 0
+        # 3. 버전 인덱스 계산
+        selected_indices, total_combinations = calculate_version_indices(
+            ordered_lists, version_idx
+        )
         
-        for synonyms in ordered_lists:
-            idx = remaining % len(synonyms)
-            selected_indices.append(idx)
-            remaining //= len(synonyms)
+        # 4. 결과 생성
+        final_text = generate_result(
+            ORDERED_COLUMNS,
+            ordered_selections,
+            ordered_lists,
+            selected_indices,
+            fixed_values
+        )
         
-        # 결과 문자열 생성 - ordered_columns 순서 유지
-        result = []
-        for key in ordered_columns:
-            if key in ordered_selections:
-                idx = ordered_selections.index(key)
-                value = ordered_lists[idx][selected_indices[idx]]
-                if value:  # 빈 값이 아닌 경우만 추가
-                    result.append(value)
-            elif key in fixed_values and fixed_values[key]:  # 빈 값이 아닌 경우만 추가
-                result.append(fixed_values[key])
-        
-        final_text = ' '.join(filter(None, result))
-        final_text = clean_text(final_text)  # 불필요 단어 제거
-        
-        return final_text, total_combinations if ordered_lists else 1
+        return clean_text(final_text), total_combinations
         
     except Exception as e:
         print(f"[ERROR] create_title_combination: {str(e)}")
-        return f"ERROR: {str(e)}", 0 
+        return f"{DEFAULT_VALUES['error_prefix']}{str(e)}", 0 
