@@ -1,0 +1,33 @@
+1. "" (정확한 문구 일치)
+  예) "ㄱ"   
+2. -(특정 단어 제외)
+  예) "ㄱ -ㄴ"   
+3. site: (특정 사이트 검색)
+  예) "ㄱ site:example.com"   
+4. intitle: (사이트 제목만 검색)
+  예) "intitle:ㄱ"   
+5. inurl: (URL 검색)
+  예) "inurl:blog ㄱ"
+6. filetype: (일치하는 파일 형식)
+  예) "ㄱ filetype:pdf"   
+7. OR (하나라도 포함)
+  예) "ㄱ OR ㄴ"   
+8. AND (기본값)   
+9. .. (숫자 범위 검색)
+  예) "ㄱ 1..5"  
+10. * (와일드카드)
+  예) "ㄱ * ㄷ"  
+11. ~ (유의어 검색)
+  예) "~가"  
+12. AROUND(n) (n 단어 이내 근접(영문 위주))
+  예) "ㄱ AROUND(3) ㅁ"  
+13. cache: (페이지 캐시 확인)
+  예) "cache:example.com"  
+14. related: (유사 사이트 찾기)
+  예) "related:example.com"  
+15. define: (영어 단어 정의)
+  예) "define:example"  
+16. info: (사이트 정보 표시)
+  예) "info:example.com"  
+17. link: (연결된 페이지(현재 거의 미지원))
+  예) "link:example.com"

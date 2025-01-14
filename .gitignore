@@ -1,25 +1,26 @@
-.env
 .DS_Store
+
+# 환경변수
+.env
+
+# 가상환경
 venv/
-build/
-dist/
-__pycache__/
-test/
 
-# 테스트 디렉토리 무시
-test/
-/test/
-tests/
-/tests/
+# 테스트 디렉토리
+# test/
+# /test/
+# tests/
+# /tests/
 
-# 빌드 결과물 무시
+# 빌드 결과물
 dist/
 build/
 *.spec
 __pycache__/
 *.pyc
 
-# 설정 파일 무시
+# 설정 파일
 settings.json
 
+# 엑셀
 *.xlsx
